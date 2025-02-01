@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Produit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ProduitController extends Controller
 {
@@ -43,23 +44,13 @@ class ProduitController extends Controller
             ]);
 
             if ($request->hasFile('imageUri')) {
-                
-                // Générer un nom de fichier unique
-                $filename = time() . '.' . $request->file('imageUri')->getClientOriginalExtension();
+                $image = $request->file('imageUri');
 
-                // Définir le chemin de stockage dans le dossier public
-                $path = public_path('storage/images');
-
-                // Vérifier si le dossier existe, sinon le créer
-                if (!file_exists($path)) {
-                    mkdir($path, 0777, true);
+                if ($image instanceof \Illuminate\Http\UploadedFile) {
+                    // Stocker l'image dans "storage/app/public/images"
+                    $path = $image->store('images', 'public');
+                    $validated['imageUrl'] = Storage::url($path);
                 }
-
-                // Déplacer l'image dans le dossier public
-                $request->file('imageUri')->move($path, $filename);
-
-                // Ajouter le chemin de la nouvelle photo dans les données à mettre à jour
-                $validated['imageUrl'] = 'storage/images/' . $filename;
             }
 
             $produit = Produit::create(array_merge($validated, [
@@ -68,7 +59,7 @@ class ProduitController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Produit ajouter avec succès.',
+                'message' => 'Produit ajouté avec succès.',
                 'data' => $produit
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -120,7 +111,8 @@ class ProduitController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            $produit = Produit::findById($id);
+            // Recherche du produit ou renvoi une erreur 404
+            $produit = Produit::findOrFail($id);
 
             $validated = $request->validate([
                 'imageUri' => 'nullable|file',
@@ -128,37 +120,27 @@ class ProduitController extends Controller
             ]);
 
             if ($request->hasFile('imageUri')) {
-
-                if ($produit->imageUrl && file_exists(public_path($produit->imageUrl))) {
-                    // Supprimer l'ancienne photo de imageUrl
-                    unlink(public_path($produit->imageUrl));
-                }
-                
-                // Générer un nom de fichier unique
-                $filename = time() . '.' . $request->file('imageUri')->getClientOriginalExtension();
-
-                // Définir le chemin de stockage dans le dossier public
-                $path = public_path('storage/images');
-
-                // Vérifier si le dossier existe, sinon le créer
-                if (!file_exists($path)) {
-                    mkdir($path, 0777, true);
+                // Suppression de l'ancienne image si elle existe
+                if ($produit->imageUrl) {
+                    $oldPath = str_replace('/storage', 'public', $produit->imageUrl);
+                    if (Storage::exists($oldPath)) {
+                        Storage::delete($oldPath);
+                    }
                 }
 
-                // Déplacer l'image dans le dossier public
-                $request->file('imageUri')->move($path, $filename);
-
-                // Ajouter le chemin de la nouvelle photo dans les données à mettre à jour
-                $validated['imageUrl'] = 'storage/images/' . $filename;
+                // Stockage de la nouvelle image
+                $path = $request->file('imageUri')->store('images', 'public');
+                $validated['imageUrl'] = Storage::url($path);
             }
 
+            // Mise à jour du produit
             $produit->update(array_merge($validated, [
                 'updated_by' => Auth::id(),
             ]));
 
             return response()->json([
                 'success' => true,
-                'message' => 'Produit mise à jour avec succès.',
+                'message' => 'Produit mis à jour avec succès.',
                 'data' => $produit
             ], 200);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -170,7 +152,7 @@ class ProduitController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'produit non trouvée.',
+                'message' => 'Produit non trouvé.',
             ], 404);
         } catch (\Exception $e) {
             return response()->json([
@@ -181,11 +163,45 @@ class ProduitController extends Controller
         }
     }
 
+
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Produit $produit)
+    public function destroy($id)
     {
-        //
+        try {
+            // Trouver le produit ou renvoyer une erreur 404
+            $produit = Produit::findOrFail($id);
+
+            // Supprimer l'image associée si elle existe
+            if ($produit->imageUrl) {
+                $oldPath = str_replace('/storage', 'public', $produit->imageUrl);
+                if (Storage::exists($oldPath)) {
+                    Storage::delete($oldPath);
+                }
+            }
+
+            // Enregistrer l'utilisateur qui supprime l'élément
+            $produit->update(['deleted_by' => Auth::id()]);
+
+            // Supprimer le produit
+            $produit->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Produit supprimé avec succès.',
+            ], 200);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Produit non trouvé.',
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur interne est survenue.',
+                'error' => env('APP_DEBUG') ? $e->getMessage() : 'Veuillez réessayer plus tard.',
+            ], 500);
+        }
     }
 }
