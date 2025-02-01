@@ -17,9 +17,12 @@ class CapitalController extends Controller
             $capitals = Capital::with(['creator', 'updater', 'deleter'])
                 ->get();
 
+            $totalAmount = $capitals->sum('amount');
+
             return response()->json([
                 'success' => true,
                 'message' => 'Liste des capitals récupérée avec succès.',
+                'totalAmount' => $totalAmount,
                 'data' => $capitals,
             ], 200);
         } catch (\Exception $e) {

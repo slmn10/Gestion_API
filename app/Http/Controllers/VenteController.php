@@ -42,7 +42,7 @@ class VenteController extends Controller
                 'quantity' => 'required|integer|min:1',
                 'amount' => 'required|integer',
                 'message' => 'nullable|string|max:255',
-                'produit' => 'required|exists:produits,id',
+                'produit_id' => 'required|exists:produits,id',
                 'date' => 'required',
             ]);
 
@@ -117,6 +117,17 @@ class VenteController extends Controller
                 'amount' => 'required|int',
                 'message' => 'nullable|string|max:255',
                 'date' => 'required',
+                'produit_id' => 'required|exists:produits,id',
+            ]);
+
+            $produit = Produit::findById($vente->produit_id);
+
+            $countProduit = $produit->quantity + $vente->quantity;
+            $upCountProduit = $countProduit - $validated['quantity'];
+
+            $produit->update([
+                'quantity' => $upCountProduit,
+                'updated_by' => Auth::id(),
             ]);
 
             $vente->update(array_merge($validated, [
@@ -155,6 +166,14 @@ class VenteController extends Controller
     {
         try {
             $vente = Vente::findById($id);
+
+            $produit = Produit::findById($vente->produit_id);
+
+            $countProduit = $produit->quantity + $vente->quantity;
+            $produit->update([
+                'quantity' => $countProduit,
+                'updated_by' => Auth::id(),
+            ]);
 
             $vente->update(['deleted_by' => Auth::id()]);
             $vente->delete();
