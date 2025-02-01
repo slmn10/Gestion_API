@@ -15,7 +15,7 @@ class VenteController extends Controller
     public function index()
     {
         try {
-            $ventes = Vente::with(['produits', 'creator', 'updater', 'deleter'])
+            $ventes = Vente::with(['produit', 'creator', 'updater', 'deleter'])
                 ->get();
 
             return response()->json([
@@ -83,7 +83,7 @@ class VenteController extends Controller
     {
         try {
             $vente = Vente::findById($id);
-            $vente->load(['produits', 'creator', 'updater', 'deleter']);
+            $vente->load(['produit', 'creator', 'updater', 'deleter']);
 
             return response()->json([
                 'success' => true,

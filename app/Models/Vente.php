@@ -25,6 +25,24 @@ class Vente extends Model
         return self::where('id', $id)->firstOrFail();
     }
 
+    // Relation avec le modèle User pour l'utilisateur créateur
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    // Relation avec le modèle User pour l'utilisateur modificateur
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    // Relation avec le modèle User pour l'utilisateur qui a marqué comme supprimée
+    public function deleter()
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
+    }
+
     public function produit()
     {
         return $this->belongsTo(Produit::class);
