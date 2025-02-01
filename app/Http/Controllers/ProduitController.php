@@ -49,7 +49,8 @@ class ProduitController extends Controller
                 if ($image instanceof \Illuminate\Http\UploadedFile) {
                     // Stocker l'image dans "storage/app/public/images"
                     $path = $image->store('images', 'public');
-                    $validated['imageUrl'] = Storage::url($path);
+                    // Enregistrer le chemin absolu dans imageUrl
+                    $validated['imageUrl'] = asset(Storage::url($path));
                 }
             }
 
@@ -130,7 +131,8 @@ class ProduitController extends Controller
 
                 // Stockage de la nouvelle image
                 $path = $request->file('imageUri')->store('images', 'public');
-                $validated['imageUrl'] = Storage::url($path);
+                // Enregistrer le chemin absolu dans imageUrl
+                $validated['imageUrl'] = asset(Storage::url($path));
             }
 
             // Mise à jour du produit
