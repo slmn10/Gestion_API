@@ -122,6 +122,16 @@ class AchatController extends Controller
                 'produit_id' => 'required|exists:produits,id',
             ]);
 
+            $produit = Produit::findById($achat->produit_id);
+
+            $countProduit = $produit->quantity - $achat->quantity;
+            $upCountProduit = $countProduit + $validated['quantity'];
+
+            $produit->update([
+                'quantity' => $upCountProduit,
+                'updated_by' => Auth::id(),
+            ]);
+
             $achat->update(array_merge($validated, [
                 'updated_by' => Auth::id(),
             ]));
@@ -158,6 +168,14 @@ class AchatController extends Controller
     {
         try {
             $achat = Achat::findById($id);
+
+            $produit = Produit::findById($achat->produit_id);
+
+            $countProduit = $produit->quantity - $achat->quantity;
+            $produit->update([
+                'quantity' => $countProduit,
+                'updated_by' => Auth::id(),
+            ]);
 
             $achat->update(['deleted_by' => Auth::id()]);
             $achat->delete();
